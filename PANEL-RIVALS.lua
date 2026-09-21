@@ -642,7 +642,7 @@ injectButton.MouseButton1Click:Connect(function()
         loginStatus.Font = Enum.Font.GothamMedium
         loginStatus.TextColor3 = Color3.fromRGB(200, 200, 200)
         loginStatus.TextSize = 11
-        loginStatus.Text = "Entrez votre clé valide (F3 pour l'Admin / RightShift pour le Panel)"
+        loginStatus.Text = "Entrez votre clé valide 
 
         local keyInput = Instance.new("TextBox", loginFrame)
         keyInput.Size = UDim2.new(0.9, 0, 0, 35)
