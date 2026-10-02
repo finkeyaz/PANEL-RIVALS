@@ -6,18 +6,15 @@ local UserInputService = game:GetService("UserInputService")
 local player = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
 
--- Nettoyage de l'ancienne interface si elle existe
 if playerGui:FindFirstChild("CustomInjectGui") then
     playerGui.CustomInjectGui:Destroy()
 end
 
--- Création du ScreenGui d'injection
 local screenGui = Instance.new("ScreenGui")
 screenGui.Name = "CustomInjectGui"
 screenGui.ResetOnSpawn = false
 screenGui.Parent = playerGui
 
--- Fenêtre principale (Fond rouge foncé, déplaçable)
 local mainFrame = Instance.new("Frame")
 mainFrame.Size = UDim2.new(0, 320, 0, 360)
 mainFrame.Position = UDim2.new(0.5, -160, 0.5, -180)
@@ -30,7 +27,6 @@ local mainCorner = Instance.new("UICorner")
 mainCorner.CornerRadius = UDim.new(0, 12)
 mainCorner.Parent = mainFrame
 
--- Système pour rendre la fenêtre déplaçable (Draggable)
 local dragging, dragInput, dragStart, startPos
 
 mainFrame.InputBegan:Connect(function(input)
@@ -65,24 +61,22 @@ game:GetService("RunService").RenderStepped:Connect(function()
     end
 end)
 
--- Texte "FK" sans carré autour, avec effet de contour lumineux sur les lettres
 local fkLabel = Instance.new("TextLabel")
 fkLabel.Size = UDim2.new(0, 200, 0, 120)
 fkLabel.Position = UDim2.new(0.5, -100, 0, 45)
 fkLabel.BackgroundTransparency = 1
 fkLabel.Text = "FK"
-fkLabel.TextColor3 = Color3.fromRGB(255, 30, 30) -- Rouge vif éclatant
+fkLabel.TextColor3 = Color3.fromRGB(255, 30, 30)
 fkLabel.TextSize = 80
 fkLabel.Font = Enum.Font.FredokaOne
 fkLabel.ZIndex = 2
 fkLabel.Parent = mainFrame
 
 local fkStroke = Instance.new("UIStroke")
-fkStroke.Color = Color3.fromRGB(255, 120, 120) -- Contour lumineux autour des lettres
+fkStroke.Color = Color3.fromRGB(255, 120, 120)
 fkStroke.Thickness = 3
 fkStroke.Parent = fkLabel
 
--- Bouton "Injecter"
 local injectButton = Instance.new("TextButton")
 injectButton.Size = UDim2.new(0.85, 0, 0, 48)
 injectButton.Position = UDim2.new(0.075, 0, 0.75, 0)
@@ -99,29 +93,25 @@ local btnCorner = Instance.new("UICorner")
 btnCorner.CornerRadius = UDim.new(0, 8)
 btnCorner.Parent = injectButton
 
--- Événement d'injection : c'est au clic que le vrai script du cheat s'exécute
 injectButton.MouseButton1Click:Connect(function()
     injectButton.Active = false
     
-    -- Étape 1 : Téléchargement
     injectButton.BackgroundColor3 = Color3.fromRGB(60, 15, 15)
     injectButton.TextColor3 = Color3.fromRGB(200, 200, 200)
     injectButton.Text = "⏳ Downloading payload..."
     
     task.wait(2.5)
     
-    -- Étape 2 : Succès
     injectButton.BackgroundColor3 = Color3.fromRGB(20, 60, 35)
     injectButton.TextColor3 = Color3.fromRGB(80, 230, 120)
     injectButton.Text = "✓ Injected successfully"
     
     task.wait(1.5)
     
-    -- Suppression de l'interface d'injection
     screenGui:Destroy()
 
     -- =========================================================================
-    -- LANCEMENT DU SCRIPT PRINCIPAL APRÈS INJECTION[cite: 1]
+    -- LANCEMENT DU SCRIPT PRINCIPAL APRÈS INJECTION
     -- =========================================================================
     task.spawn(function()
         local Players = game:GetService("Players")
@@ -190,7 +180,7 @@ injectButton.MouseButton1Click:Connect(function()
         end
 
         -- ==========================================
-        -- 3. AC BYPASS & UNLOCK ALL (RIVALS)
+        -- 3. AC BYPASS & UNLOCK ALL (RIVALS) - PERSISTANT
         -- ==========================================
         local _stbl; _stbl = hookfunction(getrenv().setmetatable, newcclosure(function(tbl, mt)
             if mt and typeof(mt) == "table" and rawget(mt, "__mode") == "kv" then
@@ -270,7 +260,7 @@ injectButton.MouseButton1Click:Connect(function()
                     if type(_c) == "string" and (_c:find("TakeTheL") or _c:find("ban") or _c:find("kick")) then
                         pcall(function()
                             hookfunction(_fn, function() end)
-                            _ct += 1
+                            _ct = _ct + 1
                         end)
                         break
                     end
@@ -284,7 +274,7 @@ injectButton.MouseButton1Click:Connect(function()
         espEnabled = false
         fpsEnabled = true
         stretchEnabled = false    
-        unlockAllEnabled = false
+        unlockAllEnabled = true -- ACTIVE PAR DÉFAUT POUR APPLIQUER LA SAUVEGARDE DIRECTEMENT
 
         local _rs     = game:GetService("ReplicatedStorage")
         local _mods   = _rs:WaitForChild("Modules", 10)
@@ -381,19 +371,20 @@ injectButton.MouseButton1Click:Connect(function()
             end
         end
 
-        local function _saveCfg()
-            if not writefile or _saveLock then return end
+        _loadCfg()
+
+        local function _saveCfgSafe()
+            if _saveLock then return end
             _saveLock = true
-            task.spawn(function()
-                task.wait(1)
-                local _payload = _stripForSave()
-                local _ok, _enc = pcall(HttpService.JSONEncode, HttpService, _payload)
-                if _ok then pcall(writefile, _cfgFile, _enc) end
+            task.delay(0.5, function()
                 _saveLock = false
+                if writefile then
+                    pcall(function()
+                        writefile(_cfgFile, HttpService:JSONEncode(_stripForSave()))
+                    end)
+                end
             end)
         end
-
-        _loadCfg()
 
         _cosLib.OwnsCosmeticNormally = function(self, inv, nm, wep)
             if not unlockAllEnabled then return false end
@@ -525,10 +516,10 @@ injectButton.MouseButton1Click:Connect(function()
                             })
                             if _cloned then _eq[_wn][_ct] = _cloned end
                         end
+                        _saveCfgSafe()
                         task.defer(function()
                             pcall(function() _datCtrl.CurrentData:Replicate("WeaponInventory") end)
                         end)
-                        _saveCfg()
                         return
                     end
 
@@ -537,10 +528,10 @@ injectButton.MouseButton1Click:Connect(function()
                         if _cos then
                             _favs[_a[1]] = _favs[_a[1]] or {}
                             _favs[_a[1]][_a[2]] = _a[3] or nil
+                            _saveCfgSafe()
                             task.spawn(function()
                                 pcall(function() _datCtrl.CurrentData:Replicate("FavoritedCosmetics") end)
                             end)
-                            _saveCfg()
                         end
                         return
                     end
@@ -642,7 +633,7 @@ injectButton.MouseButton1Click:Connect(function()
         loginStatus.Font = Enum.Font.GothamMedium
         loginStatus.TextColor3 = Color3.fromRGB(200, 200, 200)
         loginStatus.TextSize = 11
-        loginStatus.Text = "Entrez votre clé valide 
+        loginStatus.Text = "Entrez votre clé valide"
 
         local keyInput = Instance.new("TextBox", loginFrame)
         keyInput.Size = UDim2.new(0.9, 0, 0, 35)
@@ -724,7 +715,7 @@ injectButton.MouseButton1Click:Connect(function()
         cheatScroll.Size = UDim2.new(1, -10, 1, -45)
         cheatScroll.Position = UDim2.new(0, 5, 0, 38)
         cheatScroll.BackgroundTransparency = 1
-        cheatScroll.CanvasSize = UDim2.new(0, 0, 0, 500)
+        cheatScroll.CanvasSize = UDim2.new(0, 0, 0, 550)
         cheatScroll.ScrollBarThickness = 4
 
         local cheatList = Instance.new("UIListLayout", cheatScroll)
@@ -804,15 +795,106 @@ injectButton.MouseButton1Click:Connect(function()
         end
 
         local aimBtn = createRedCheatBtn("Aimbot: OFF")
+        
+        -- ==========================================
+        -- AJOUT DU PANEL AIMBOT V2 (Juste en bas du bouton aimbot)
+        -- ==========================================
+        local aimbotV2Gui = Instance.new("ScreenGui", targetParent)
+        aimbotV2Gui.Name = "FK_AimbotV2_Gui"
+        aimbotV2Gui.ResetOnSpawn = false
+
+        local aimbotV2Frame = Instance.new("Frame", aimbotV2Gui)
+        aimbotV2Frame.Size = UDim2.new(0, 260, 0, 280)
+        aimbotV2Frame.Position = UDim2.new(0.5, 130, 0.3, 0)
+        aimbotV2Frame.BackgroundColor3 = Color3.fromRGB(22, 22, 30)
+        aimbotV2Frame.Active = true
+        aimbotV2Frame.Draggable = true
+        aimbotV2Frame.Visible = false
+        Instance.new("UICorner", aimbotV2Frame).CornerRadius = UDim.new(0, 8)
+        local aimV2Stroke = Instance.new("UIStroke", aimbotV2Frame)
+        aimV2Stroke.Color = Color3.fromRGB(255, 50, 50)
+        aimV2Stroke.Thickness = 1.5
+
+        local aimV2Title = Instance.new("TextLabel", aimbotV2Frame)
+        aimV2Title.Size = UDim2.new(1, 0, 0, 32)
+        aimV2Title.BackgroundTransparency = 1
+        aimV2Title.Font = Enum.Font.GothamBold
+        aimV2Title.Text = "🎯 FK AIMBOT V2 [Auto Only]"
+        aimV2Title.TextColor3 = Color3.fromRGB(255, 100, 100)
+        aimV2Title.TextSize = 12
+
+        local aimV2List = Instance.new("UIListLayout", aimbotV2Frame)
+        aimV2List.HorizontalAlignment = Enum.HorizontalAlignment.Center
+        aimV2List.SortOrder = Enum.SortOrder.LayoutOrder
+        aimV2List.Padding = UDim.new(0, 8)
+
+        local dummyPad = Instance.new("Frame", aimbotV2Frame)
+        dummyPad.Size = UDim2.new(1, 0, 0, 32)
+        dummyPad.BackgroundTransparency = 1
+        dummyPad.LayoutOrder = 1
+
+        local aimV2Toggle = Instance.new("TextButton", aimbotV2Frame)
+        aimV2Toggle.Size = UDim2.new(0.9, 0, 0, 35)
+        aimV2Toggle.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
+        aimV2Toggle.Font = Enum.Font.GothamBold
+        aimV2Toggle.Text = "Aimbot V2 (Tête): OFF"
+        aimV2Toggle.TextColor3 = Color3.fromRGB(255, 100, 100)
+        aimV2Toggle.TextSize = 11
+        aimV2Toggle.LayoutOrder = 2
+        Instance.new("UICorner", aimV2Toggle).CornerRadius = UDim.new(0, 6)
+
+        local fovToggle = Instance.new("TextButton", aimbotV2Frame)
+        fovToggle.Size = UDim2.new(0.9, 0, 0, 35)
+        fovToggle.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
+        fovToggle.Font = Enum.Font.GothamBold
+        fovToggle.Text = "Cercle FOV: OFF"
+        fovToggle.TextColor3 = Color3.fromRGB(255, 100, 100)
+        fovToggle.TextSize = 11
+        fovToggle.LayoutOrder = 3
+        Instance.new("UICorner", fovToggle).CornerRadius = UDim.new(0, 6)
+
+        local rgbFovToggle = Instance.new("TextButton", aimbotV2Frame)
+        rgbFovToggle.Size = UDim2.new(0.9, 0, 0, 35)
+        rgbFovToggle.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
+        rgbFovToggle.Font = Enum.Font.GothamBold
+        rgbFovToggle.Text = "FOV RGB: OFF"
+        rgbFovToggle.TextColor3 = Color3.fromRGB(255, 100, 100)
+        rgbFovToggle.TextSize = 11
+        rgbFovToggle.LayoutOrder = 4
+        Instance.new("UICorner", rgbFovToggle).CornerRadius = UDim.new(0, 6)
+
+        local fovSizeBtn = Instance.new("TextButton", aimbotV2Frame)
+        fovSizeBtn.Size = UDim2.new(0.9, 0, 0, 35)
+        fovSizeBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
+        fovSizeBtn.Font = Enum.Font.GothamBold
+        fovSizeBtn.Text = "Taille FOV [120]"
+        fovSizeBtn.TextColor3 = Color3.fromRGB(200, 200, 255)
+        fovSizeBtn.TextSize = 11
+        fovSizeBtn.LayoutOrder = 5
+        Instance.new("UICorner", fovSizeBtn).CornerRadius = UDim.new(0, 6)
+
+        local openAimbotV2Btn = Instance.new("TextButton", cheatScroll)
+        openAimbotV2Btn.Size = UDim2.new(1, -10, 0, 35)
+        openAimbotV2Btn.BackgroundColor3 = Color3.fromRGB(50, 30, 60)
+        openAimbotV2Btn.Font = Enum.Font.GothamBold
+        openAimbotV2Btn.Text = "⚙ Ouvrir Panel Aimbot V2"
+        openAimbotV2Btn.TextColor3 = Color3.fromRGB(220, 150, 255)
+        openAimbotV2Btn.TextSize, openAimbotV2Btn.BorderSizePixel = 11, 0
+        Instance.new("UICorner", openAimbotV2Btn).CornerRadius = UDim.new(0, 6)
+
+        openAimbotV2Btn.MouseButton1Click:Connect(function()
+            aimbotV2Frame.Visible = not aimbotV2Frame.Visible
+        end)
+
         local espBtn = createRedCheatBtn("ESP Skeleton RGB: OFF")
         local fpsToggleBtn = createRedCheatBtn("Compteur FPS: ON")
 
         local skinBtn = Instance.new("TextButton", cheatScroll)
         skinBtn.Size = UDim2.new(1, -10, 0, 35)
-        skinBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
+        skinBtn.BackgroundColor3 = Color3.fromRGB(30, 70, 40) -- ACTIVÉ DIRECTEMENT PAR DÉFAUT
         skinBtn.Font = Enum.Font.GothamBold
-        skinBtn.Text = "Unlock All Skins: OFF"
-        skinBtn.TextColor3 = Color3.fromRGB(255, 100, 100)
+        skinBtn.Text = "Unlock All Skins: ACTIF"
+        skinBtn.TextColor3 = Color3.fromRGB(100, 255, 100)
         skinBtn.TextSize, skinBtn.BorderSizePixel = 11, 0
         Instance.new("UICorner", skinBtn).CornerRadius = UDim.new(0, 6)
 
@@ -847,20 +929,22 @@ injectButton.MouseButton1Click:Connect(function()
             if FK_FPS_GUI_Instance then FK_FPS_GUI_Instance.Enabled = fpsEnabled end
         end)
 
+        local skinActivated = true -- DÉJÀ ACTIF POUR FORCER LA RÉPLICATION DE LA SAUVEGARDE
         skinBtn.MouseButton1Click:Connect(function()
-            if not unlockAllEnabled then
-                unlockAllEnabled = true
-                skinBtn.Text = "Unlock All Skins: ACTIF (Bloqué)"
+            skinActivated = not skinActivated
+            unlockAllEnabled = skinActivated
+            if skinActivated then
+                skinBtn.Text = "Unlock All Skins: ACTIF"
                 skinBtn.TextColor3 = Color3.fromRGB(100, 255, 100)
                 skinBtn.BackgroundColor3 = Color3.fromRGB(30, 70, 40)
             else
-                skinBtn.Text = "Unlock All Skins: DÉJÀ ACTIF (Bloqué)"
-                task.delay(1, function()
-                    if skinBtn and skinBtn.Parent then
-                        skinBtn.Text = "Unlock All Skins: ACTIF (Bloqué)"
-                    end
-                end)
+                skinBtn.Text = "Unlock All Skins: OFF"
+                skinBtn.TextColor3 = Color3.fromRGB(255, 100, 100)
+                skinBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
             end
+            task.defer(function()
+                pcall(function() _datCtrl.CurrentData:Replicate("WeaponInventory") end)
+            end)
         end)
 
         stretchBtn.MouseButton1Click:Connect(function()
@@ -906,17 +990,85 @@ injectButton.MouseButton1Click:Connect(function()
                 if isLicenseValid() then
                     cheatMain.Visible = not cheatMain.Visible
                 end
+            elseif input.KeyCode == Enum.KeyCode.RightControl then
+                if isLicenseValid() then
+                    aimbotV2Frame.Visible = not aimbotV2Frame.Visible
+                end
             end
         end)
 
         -- ==========================================
-        -- 6. AIMBOT SYSTEM
+        -- 6. AIMBOT SYSTEM & AIMBOT V2 (Auto Only)
         -- ==========================================
+        local aimbotV2Enabled = false
+        local fovCircleVisible = false
+        local rgbFovEnabled = false
+        local currentFovRadius = 120
+
+        local fovDrawing = Drawing.new("Circle")
+        fovDrawing.Visible = false
+        fovDrawing.Thickness = 1.5
+        fovDrawing.NumSides = 60
+        fovDrawing.Filled = false
+        fovDrawing.Color = Color3.fromRGB(255, 255, 255)
+
+        aimV2Toggle.MouseButton1Click:Connect(function()
+            aimbotV2Enabled = toggleState(aimV2Toggle, aimbotV2Enabled, "Aimbot V2 (Tête): ON", "Aimbot V2 (Tête): OFF")
+        end)
+
+        fovToggle.MouseButton1Click:Connect(function()
+            fovCircleVisible = toggleState(fovToggle, fovCircleVisible, "Cercle FOV: ON", "Cercle FOV: OFF")
+            fovDrawing.Visible = fovCircleVisible
+        end)
+
+        rgbFovToggle.MouseButton1Click:Connect(function()
+            rgbFovEnabled = toggleState(rgbFovToggle, rgbFovEnabled, "FOV RGB: ON", "FOV RGB: OFF")
+        end)
+
+        local fovSizes = {80, 120, 180, 240, 300}
+        local fovIdx = 2
+        fovSizeBtn.MouseButton1Click:Connect(function()
+            fovIdx = fovIdx + 1
+            if fovIdx > #fovSizes then fovIdx = 1 end
+            currentFovRadius = fovSizes[fovIdx]
+            fovSizeBtn.Text = "Taille FOV [" .. currentFovRadius .. "]"
+        end)
+
+        local function isAutomaticWeapon()
+            local char = LocalPlayer.Character
+            if not char then return false end
+            local tool = char:FindFirstChildOfClass("Tool")
+            if not tool then return false end
+            
+            local nameLower = tool.Name:lower()
+            local semiKeywords = {"sniper", "shotgun", "revolver", "pistol", "pump", "bolt", "semi", "deagle", "magnum", "rifle"}
+            for _, kw in ipairs(semiKeywords) do
+                if nameLower:find(kw) then
+                    return false
+                end
+            end
+            return true
+        end
+
         RunService.RenderStepped:Connect(function()
+            local mousePos = UserInputService:GetMouseLocation()
+
+            if fovCircleVisible then
+                fovDrawing.Position = mousePos
+                fovDrawing.Radius = currentFovRadius
+                if rgbFovEnabled then
+                    fovDrawing.Color = Color3.fromHSV((tick() * 0.3) % 1, 1, 1)
+                else
+                    fovDrawing.Color = Color3.fromRGB(255, 255, 255)
+                end
+                fovDrawing.Visible = true
+            else
+                fovDrawing.Visible = false
+            end
+
             if aimbotEnabled and UserInputService:IsMouseButtonPressed(Enum.UserInputType.MouseButton2) then
                 local closestPlayer = nil
                 local shortestDistance = math.huge
-                local mousePos = UserInputService:GetMouseLocation()
 
                 for _, player in ipairs(Players:GetPlayers()) do
                     if player ~= LocalPlayer and player.Character then
@@ -939,6 +1091,37 @@ injectButton.MouseButton1Click:Connect(function()
                     local head = closestPlayer.Character:FindFirstChild("Head")
                     if head then
                         Camera.CFrame = CFrame.new(Camera.CFrame.Position, head.Position)
+                    end
+                end
+            end
+
+            if aimbotV2Enabled and UserInputService:IsMouseButtonPressed(Enum.UserInputType.MouseButton2) then
+                if isAutomaticWeapon() then
+                    local closestPlayerV2 = nil
+                    local shortestDistV2 = currentFovRadius
+
+                    for _, player in ipairs(Players:GetPlayers()) do
+                        if player ~= LocalPlayer and player.Character then
+                            local humanoid = player.Character:FindFirstChildOfClass("Humanoid")
+                            local head = player.Character:FindFirstChild("Head")
+                            if humanoid and humanoid.Health > 0 and head then
+                                local vector, onScreen = Camera:WorldToViewportPoint(head.Position)
+                                if onScreen then
+                                    local screenDist = (Vector2.new(vector.X, vector.Y) - mousePos).Magnitude
+                                    if screenDist < shortestDistV2 then
+                                        shortestDistV2 = screenDist
+                                        closestPlayerV2 = player
+                                    end
+                                end
+                            end
+                        end
+                    end
+
+                    if closestPlayerV2 and closestPlayerV2.Character then
+                        local head = closestPlayerV2.Character:FindFirstChild("Head")
+                        if head then
+                            Camera.CFrame = CFrame.new(Camera.CFrame.Position, head.Position)
+                        end
                     end
                 end
             end
@@ -1257,7 +1440,7 @@ injectButton.MouseButton1Click:Connect(function()
         adminTitle.Size = UDim2.new(1, 0, 0, 30)
         adminTitle.BackgroundTransparency = 1
         adminTitle.Font = Enum.Font.GothamBold
-        adminTitle.Text = "🛠️ FK PANEL - ADMINISTRATION DES CLÉS"
+        adminTitle.Text = "🛠 FK PANEL - ADMINISTRATION DES CLÉS"
         adminTitle.TextColor3 = Color3.fromRGB(255, 80, 80)
         adminTitle.TextSize = 12
 
